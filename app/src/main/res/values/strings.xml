@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">SampleDogImagesApp</string>
+    <string name="title_activity_main_view">MainView</string>
+    <string name="title_activity_dog_image_screen">DogImageScreen</string>
+</resources>
