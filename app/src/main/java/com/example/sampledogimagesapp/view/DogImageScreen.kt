@@ -1,5 +1,6 @@
 package com.example.sampledogimagesapp.view
 
+import android.content.res.Configuration
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,9 +12,8 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.imageResource
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -21,9 +21,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 import com.bumptech.glide.request.RequestOptions
-import com.example.dogimagelibrary.DogImages
-import com.example.dogimagelibrary.network.DogProperty
-
 import com.example.sampledogimagesapp.R
 import com.example.sampledogimagesapp.viewmodel.DogImageScreenViewmodel
 
@@ -34,65 +31,140 @@ fun DogImageScreen(dogViewModel:DogImageScreenViewmodel= viewModel()) {
     val status by dogViewModel.status.observeAsState()
     var sliderPosition by remember { mutableStateOf(0f) }
 
-    
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(10.dp),
-        horizontalAlignment = Alignment.CenterHorizontally){
-        if(status!="Failure") {
-            LazyColumn(modifier = Modifier.fillMaxHeight(0.75f)) {
-                dogImages?.size?.let { count ->
-                    items(count) { index ->
-                        dogImages?.elementAt(index)?.let { uri -> DogImage(dogImage = uri) }
+    var orientation by remember { mutableStateOf(Configuration.ORIENTATION_PORTRAIT) }
+
+    val configuration = LocalConfiguration.current
+
+    LaunchedEffect(configuration) {
+        snapshotFlow { configuration.orientation }
+            .collect { orientation = it }
+    }
+
+    when (orientation) {
+        Configuration.ORIENTATION_LANDSCAPE -> {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(10.dp),
+                ) {
+                if (status != "Failure") {
+                    LazyColumn(modifier = Modifier.fillMaxHeight().fillMaxWidth(0.5f)) {
+                        dogImages?.size?.let { count ->
+                            items(count) { index ->
+                                dogImages?.elementAt(index)?.let { uri -> DogImage(dogImage = uri) }
+                            }
+                        }
+                    }
+                } else {
+                    Text(
+                        modifier = Modifier.fillMaxHeight().fillMaxWidth(0.5f),
+                        text = "Please connect to the Internet and Try Again", fontSize = 25.sp,
+                        textAlign = TextAlign.Center
+                    )
+
+                }
+                Column {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            modifier = Modifier.fillMaxWidth(0.2f),
+                            text = sliderPosition.toInt().toString(),
+                            textAlign = TextAlign.Center
+                        )
+                        Slider(
+                            modifier = Modifier.fillMaxWidth(0.8f),
+                            value = sliderPosition,
+                            valueRange = 0f..10f,
+                            steps = 10,
+                            onValueChange = { sliderPosition = it }
+                        )
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(5.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        Button(
+                            enabled = imageIndex != 0,
+                            onClick = { dogViewModel.getPrev() }) {
+                            Text(text = "Previous")
+                        }
+                        Button(
+                            enabled = sliderPosition.toInt() != 0,
+                            onClick = { dogViewModel.getDogProperties(sliderPosition.toInt()) }) {
+                            Text(text = "Get ${sliderPosition.toInt()}")
+                        }
+                        Button(onClick = { dogViewModel.getNext() }) {
+                            Text(text = "Next")
+                        }
                     }
                 }
             }
-        }else{
-            Text(
-                modifier = Modifier.fillMaxHeight(0.7f),
-                text="Please connect to the Internet and Try Again", fontSize = 25.sp,
-                textAlign= TextAlign.Center
-            )
-
         }
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            Text(modifier=Modifier.fillMaxWidth(0.2f),
-                text = sliderPosition.toInt().toString()
-            )
-            Slider(
-                modifier=Modifier.fillMaxWidth(0.8f),
-                value = sliderPosition,
-                valueRange = 0f..10f,
-                steps=10,
-                onValueChange = { sliderPosition = it }
-            )
-        }
-        Row(
-            modifier= Modifier
-                .fillMaxWidth()
-                .padding(5.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly){
-            Button(
-                enabled=imageIndex!=0,
-                onClick = {dogViewModel.getPrev()}) {
-                Text(text = "Previous")
-            }
-            Button(
-                enabled=sliderPosition.toInt()!=0,
-                onClick = {dogViewModel.getDogProperties(sliderPosition.toInt())}) {
-                Text(text = "Get ${sliderPosition.toInt()}")
-            }
-            Button(onClick = {dogViewModel.getNext()}) {
-                Text(text = "Next")
-            }
-        }
+        else -> {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally){
+                if(status!="Failure") {
+                    LazyColumn(modifier = Modifier.fillMaxHeight(0.75f)) {
+                        dogImages?.size?.let { count ->
+                            items(count) { index ->
+                                dogImages?.elementAt(index)?.let { uri -> DogImage(dogImage = uri) }
+                            }
+                        }
+                    }
+                }else{
+                    Text(
+                        modifier = Modifier.fillMaxHeight(0.7f),
+                        text="Please connect to the Internet and Try Again", fontSize = 25.sp,
+                        textAlign= TextAlign.Center
+                    )
 
-
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Text(modifier=Modifier.fillMaxWidth(0.2f),
+                        text = sliderPosition.toInt().toString(),
+                        textAlign = TextAlign.Center
+                    )
+                    Slider(
+                        modifier=Modifier.fillMaxWidth(0.8f),
+                        value = sliderPosition,
+                        valueRange = 0f..10f,
+                        steps=10,
+                        onValueChange = { sliderPosition = it }
+                    )
+                }
+                Row(
+                    modifier= Modifier
+                        .fillMaxWidth()
+                        .padding(5.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly){
+                    Button(
+                        enabled=imageIndex!=0,
+                        onClick = {dogViewModel.getPrev()}) {
+                        Text(text = "Previous")
+                    }
+                    Button(
+                        enabled=sliderPosition.toInt()!=0,
+                        onClick = {dogViewModel.getDogProperties(sliderPosition.toInt())}) {
+                        Text(text = "Get ${sliderPosition.toInt()}")
+                    }
+                    Button(onClick = {dogViewModel.getNext()}) {
+                        Text(text = "Next")
+                    }
+                }
+            }
+        }
     }
+
 }
 
 
